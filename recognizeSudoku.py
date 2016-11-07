@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 import random
 
-def getSudokuBox(image):
+#detect and cut the biggest box in the image
+def get_sudoku_box(image):
 	gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
 	edges = cv2.Canny(gray,50,150,apertureSize = 3)
 
@@ -27,7 +28,8 @@ def getSudokuBox(image):
 
  	return sudokubox
 
-def getSudokuLines(sudokubox):
+#get houghlines in the sudokubox
+def get_sudoku_lines(sudokubox):
  	canny  = cv2.Canny(sudokubox,50,150,apertureSize = 3)
 
  	lin = []
@@ -46,11 +48,11 @@ def getSudokuLines(sudokubox):
 
 	return lin
 
-def splitLines(lines, sudokubox):
+#divide into horizontal and vertical lines and transforme lines to inside the image
+def split_lines(lines, sudokubox):
 	horizontal_lines = []
 	vertical_lines = []
 
-	#divide into horizontal and vertical lines and transforme lines to inside the image
 	for l in lines:
 		x1, y1, x2, y2 = l
 		dx = abs(x1-x2)
@@ -84,8 +86,9 @@ def splitLines(lines, sudokubox):
 			vertical_lines.append([x1,y1,x2,y2])
 
 	return [horizontal_lines, vertical_lines]
-			
-def groupLines(horizontal_lines, vertical_lines, sudokubox):
+
+#put lines into groups that belong to the same line	
+def group_lines(horizontal_lines, vertical_lines, sudokubox):
 
 	horizontal_lines.sort(key=lambda x: x[1])
 	prev = horizontal_lines[0][1]
@@ -143,8 +146,8 @@ def groupLines(horizontal_lines, vertical_lines, sudokubox):
 
 	return [hlinegroups ,vlinegroups]
 
-def averageLineGroups(groups):
-	
+#take the average line of a group of lines
+def average_line_groups(groups):
 	lines = []
 	#average lines of linegroups
 	for group in groups:
@@ -155,29 +158,27 @@ def averageLineGroups(groups):
 
 	return lines 
 
-def drawLines(lines, image):
-	r = random.randint(0,255)
-	g = random.randint(0,255)
-	b = random.randint(0,255)
+#function to draw lines on the image with a random color
+def draw_lines(lines, image):
+	color = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
 	#draw lines
 	for line in lines:
 		x1, y1, x2, y2 = line
-		cv2.line(image,(int(x1),int(y1)),(int(x2),int(y2)),(r,g,b),2)
+		cv2.line(image,(int(x1),int(y1)),(int(x2),int(y2)), color,2)
 
 	return image
 
-def drawBoxes(boxes, image):
-	r = random.randint(0,255)
-	g = random.randint(0,255)
-	b = random.randint(0,255)
-	#draw lines
+#function to draw the number boxes on the image 
+def draw_boxes(boxes, image):
+	color = (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+	#draw boxes
 	for box in boxes:
 		p1, p2 = box
-		cv2.rectangle(image,(p1[0],p1[1]),(p2[0],p2[1]),(r,g,b),2)
-
+		cv2.rectangle(image,(p1[0],p1[1]),(p2[0],p2[1]),color,2)
 	return image
 
-def intersectLines(hline,vline):
+#gives intersection point of 2 lines
+def intersect_lines(hline,vline):
 	hline = [[hline[0],hline[1]],[hline[2],hline[3]]]
 	vline = [[vline[0],vline[1]],[vline[2],vline[3]]]
 	xdiff = (hline[0][0] - hline[1][0], vline[0][0] - vline[1][0])
@@ -194,15 +195,17 @@ def intersectLines(hline,vline):
 	y = det(d, ydiff) / div
 	return [x, y]
 
+#gives box coordinates by horizontal and vertical lines
 def get_boxes(horizontal_lines, vertical_lines):
 	boxes = []
 	for x in xrange(9):
 		for y in xrange(9):
-			p1 = intersectLines(horizontal_lines[x], vertical_lines[y])
-			p2 = intersectLines(horizontal_lines[x+1], vertical_lines[y+1])
+			p1 = intersect_lines(horizontal_lines[x], vertical_lines[y])
+			p2 = intersect_lines(horizontal_lines[x+1], vertical_lines[y+1])
 			boxes.append([p1,p2])
 	return boxes
 
+#cut the boxes from the image
 def cut_boxes(boxes, sudokubox):
 	box_images = []
 	for box in boxes:
@@ -213,27 +216,27 @@ def cut_boxes(boxes, sudokubox):
 	return box_images
 
 def main():
+	#read imagenames from the command line
 	for image_name in sys.argv[1:]:
 		print image_name
 		image  = cv2.imread(image_name)
-		sudokubox = getSudokuBox(image)
-		lines = getSudokuLines(sudokubox)
-		h, v = splitLines(lines, sudokubox)
-		hg, vg = groupLines(h, v, sudokubox)
-		hl = averageLineGroups(hg)
-		vl = averageLineGroups(vg)
+		sudokubox = get_sudoku_box(image)
+		lines = get_sudoku_lines(sudokubox)
+		h, v = split_lines(lines, sudokubox)
+		hg, vg = group_lines(h, v, sudokubox)
+		hl = average_line_groups(hg)
+		vl = average_line_groups(vg)
 		boxes = get_boxes(hl,vl)
-
-		sudokubox = drawBoxes(boxes, sudokubox)
 
 		box_images = cut_boxes(boxes, sudokubox)
 
+		#save box images
 		for n, box_image in enumerate(box_images):
 			cv2.imwrite(unicode(n) + image_name, box_image)
 
-
+		#draw boxes and save to file
+		sudokubox = draw_boxes(boxes, sudokubox)
 		cv2.imwrite('output' + image_name, sudokubox)
-
 
 main()
 
