@@ -2,6 +2,8 @@ import os,sys
 import numpy as np
 import cv2
 import random
+from PIL import Image
+import pytesseract
 
 #detect and cut the biggest box in the image
 def get_sudoku_box(image):
@@ -23,9 +25,8 @@ def get_sudoku_box(image):
  			bw = w
  			bh = h
 
- 	cv2.rectangle(gray,(bx,by),(bx+bw,by+bh),(0,255,0),2)
+ 	#cv2.rectangle(gray,(bx,by),(bx+bw,by+bh),(0,255,0),2)
  	sudokubox = image[by:by+bh,bx:bx+bw]
-
  	return sudokubox
 
 #get houghlines in the sudokubox
@@ -215,6 +216,41 @@ def cut_boxes(boxes, sudokubox):
 		box_images.append(box_image)
 	return box_images
 
+#get the number image from the box_image or return none if there is no number
+def subtract_number(box_image):
+	box_image = cv2.cvtColor(box_image,cv2.COLOR_BGR2GRAY)
+	ret, box_image = cv2.threshold(box_image, 90, 255, cv2.THRESH_BINARY)
+
+	w,h = list(box_image.shape)
+
+	#cut 10% from the border
+	offset_x = w/10
+	offset_y = h/10
+	number_image = box_image[offset_x:w-offset_x,offset_y:h-offset_y]
+	w,h = list(number_image.shape)
+	if (number_image == 0).sum() < 350:
+		return
+	side = min(w,h)
+	number_image = number_image[0:side,0:side]
+	number_image = number_image[10:80,10:80]
+ 	return number_image
+
+def make_mock_sudoku(number_images):
+	mocksudoku = np.zeros(81)
+	numbers_image = np.full((70,0), 255.0)
+
+	for n, number_image in enumerate(number_images):
+		number_image = subtract_number(number_image)
+		if number_image is not None:
+			number_image = np.array(number_image)
+			#set a 1 in the mocksudoku and join number_image to be ocr'ed image
+			mocksudoku[n] = 1
+			#cv2.imwrite(unicode(n) + 'image_name.jpeg', number_image)
+			
+			numbers_image = np.concatenate([numbers_image, number_image], axis=1)
+
+	return mocksudoku, numbers_image
+    	
 def main():
 	#read imagenames from the command line
 	for image_name in sys.argv[1:]:
@@ -230,11 +266,27 @@ def main():
 
 		box_images = cut_boxes(boxes, sudokubox)
 
-		#save box images
-		for n, box_image in enumerate(box_images):
-			cv2.imwrite(unicode(n) + image_name, box_image)
+		mocksudoku, ocr_image = make_mock_sudoku(box_images)
+		cv2.imwrite('output_ocr' + image_name, ocr_image)
 
-		#draw boxes and save to file
+		sudoku_digits = pytesseract.image_to_string(Image.fromarray(ocr_image.astype(np.uint8)))
+
+		sudoku_digits = list(unicode(sudoku_digits))
+		sudoku_digits.reverse()
+
+		sudoku = []
+		for x in mocksudoku:
+			if x:
+				sudoku.append(int(sudoku_digits.pop()))
+			else:
+				sudoku.append(0)
+
+
+		for i in xrange(9):
+			for j in xrange(9):
+				sys.stdout.write(unicode(sudoku[i*9+j]))
+			sys.stdout.write('\n')
+
 		sudokubox = draw_boxes(boxes, sudokubox)
 		cv2.imwrite('output' + image_name, sudokubox)
 
