@@ -264,7 +264,6 @@ def make_ocr_image(number_images):
 
 	ocr_image = np.full((h,0), 255.0)
 
-	print unicode(ocr_image.shape) 
 	equal_number_images = []
 	for number_image in number_images:
 		expand = h - number_image.shape[0] 
@@ -283,12 +282,20 @@ def make_ocr_image(number_images):
 		number_image = np.vstack((number_image, lower_extention_image))
 
 		equal_number_images.append(number_image)
-		print unicode(number_image.shape) 
 
 	for n, number_image in enumerate(equal_number_images):
 		ocr_image = np.concatenate((ocr_image, number_image), axis=1)
 
 	return ocr_image
+
+def assemble_sudoku(mocksudoku, sudoku_digits):
+	sudoku = []
+	for x in mocksudoku:
+		if x:
+			sudoku.append(int(sudoku_digits.pop()))
+		else:
+			sudoku.append(0)
+	return sudoku
     	
 def main():
 	#read imagenames from the command line
@@ -306,25 +313,24 @@ def main():
 		box_images = cut_boxes(boxes, sudokubox)
 
 		mocksudoku, ocr_image = make_mock_sudoku(box_images)
+
 		cv2.imwrite('output_ocr' + image_name, ocr_image)
 
+		#read numbers from ocr_image
 		sudoku_digits = pytesseract.image_to_string(Image.fromarray(ocr_image.astype(np.uint8)))
-
 		sudoku_digits = list(unicode(sudoku_digits))
 		sudoku_digits.reverse()
 
-		sudoku = []
-		for x in mocksudoku:
-			if x:
-				sudoku.append(int(sudoku_digits.pop()))
-			else:
-				sudoku.append(0)
+		#assemble the sudoku from numbers and the mock
+		sudoku = assemble_sudoku(mocksudoku, sudoku_digits)
 
-
+		#print the sudoku
 		for i in xrange(9):
 			for j in xrange(9):
 				sys.stdout.write(unicode(sudoku[i*9+j]))
 			sys.stdout.write('\n')
+
+		r(unicode(sudoku))
 
 		sudokubox = draw_boxes(boxes, sudokubox)
 		cv2.imwrite('output' + image_name, sudokubox)
