@@ -223,33 +223,72 @@ def subtract_number(box_image):
 
 	w,h = list(box_image.shape)
 
-	#cut 10% from the border
-	offset_x = w/10
-	offset_y = h/10
-	number_image = box_image[offset_x:w-offset_x,offset_y:h-offset_y]
+	middle_x = w/2
+	middle_y = h/2
+
+	crop_factor = 0.7
+
+	w *= crop_factor
+	h *= crop_factor
+
+	number_image = box_image[
+		middle_x - w/2:middle_x + w/2,
+		middle_y - h/2:middle_y + h/2]
+
 	w,h = list(number_image.shape)
 	if (number_image == 0).sum() < 350:
 		return
-	side = min(w,h)
-	number_image = number_image[0:side,0:side]
-	number_image = number_image[10:80,10:80]
  	return number_image
 
-def make_mock_sudoku(number_images):
+def make_mock_sudoku(box_images):
 	mocksudoku = np.zeros(81)
-	numbers_image = np.full((70,0), 255.0)
+	number_images = []
 
-	for n, number_image in enumerate(number_images):
-		number_image = subtract_number(number_image)
+	for n, box_image in enumerate(box_images):
+		number_image = subtract_number(box_image)
 		if number_image is not None:
-			number_image = np.array(number_image)
 			#set a 1 in the mocksudoku and join number_image to be ocr'ed image
 			mocksudoku[n] = 1
 			#cv2.imwrite(unicode(n) + 'image_name.jpeg', number_image)
+			number_images.append(number_image)
 			
-			numbers_image = np.concatenate([numbers_image, number_image], axis=1)
+	return mocksudoku, make_ocr_image(number_images)
 
-	return mocksudoku, numbers_image
+#
+def make_ocr_image(number_images):
+	dimentions = []
+	for number_image in number_images:
+		dimentions.append(list(number_image.shape))
+
+	h = max([row[0] for row in dimentions])
+
+	ocr_image = np.full((h,0), 255.0)
+
+	print unicode(ocr_image.shape) 
+	equal_number_images = []
+	for number_image in number_images:
+		expand = h - number_image.shape[0] 
+		width = number_image.shape[1]
+		if expand%2:
+			expand_upper_half = expand/2
+			expand_lower_half = expand_upper_half + 1
+		else:
+			expand_upper_half = expand/2
+			expand_lower_half = expand_upper_half
+
+		upper_extention_image = np.full((expand_lower_half,width), 255.0)
+		lower_extention_image = np.full((expand_upper_half,width), 255.0)
+
+		number_image = np.vstack((upper_extention_image, number_image))
+		number_image = np.vstack((number_image, lower_extention_image))
+
+		equal_number_images.append(number_image)
+		print unicode(number_image.shape) 
+
+	for n, number_image in enumerate(equal_number_images):
+		ocr_image = np.concatenate((ocr_image, number_image), axis=1)
+
+	return ocr_image
     	
 def main():
 	#read imagenames from the command line
