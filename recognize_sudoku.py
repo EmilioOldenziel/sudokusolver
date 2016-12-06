@@ -6,6 +6,8 @@ import random
 from PIL import Image
 import pytesseract
 
+DEBUG = False
+
 # detect and cut the biggest box in the image
 def get_sudoku_box(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -32,8 +34,6 @@ def get_sudoku_box(image):
     return sudokubox
 
 # get houghlines in the sudokubox
-
-
 def get_sudoku_lines(sudokubox):
     canny = cv2.Canny(sudokubox, 50, 150, apertureSize=3)
 
@@ -55,8 +55,6 @@ def get_sudoku_lines(sudokubox):
 
 # divide into horizontal and vertical lines and transforme lines to inside
 # the image
-
-
 def split_lines(lines, sudokubox):
     horizontal_lines = []
     vertical_lines = []
@@ -96,8 +94,6 @@ def split_lines(lines, sudokubox):
     return [horizontal_lines, vertical_lines]
 
 # put lines into groups that belong to the same line
-
-
 def group_lines(horizontal_lines, vertical_lines, sudokubox):
 
     horizontal_lines.sort(key=lambda x: x[1])
@@ -157,8 +153,6 @@ def group_lines(horizontal_lines, vertical_lines, sudokubox):
     return [hlinegroups, vlinegroups]
 
 # take the average line of a group of lines
-
-
 def average_line_groups(groups):
     lines = []
     # average lines of linegroups
@@ -171,8 +165,6 @@ def average_line_groups(groups):
     return lines
 
 # function to draw lines on the image with a random color
-
-
 def draw_lines(lines, image):
     color = (random.randint(0, 255), random.randint(
         0, 255), random.randint(0, 255))
@@ -196,8 +188,6 @@ def draw_boxes(boxes, image):
     return image
 
 # gives intersection point of 2 lines
-
-
 def intersect_lines(hline, vline):
     hline = [[hline[0], hline[1]], [hline[2], hline[3]]]
     vline = [[vline[0], vline[1]], [vline[2], vline[3]]]
@@ -217,8 +207,6 @@ def intersect_lines(hline, vline):
     return [x, y]
 
 # gives box coordinates by horizontal and vertical lines
-
-
 def get_boxes(horizontal_lines, vertical_lines):
     boxes = []
     for x in xrange(9):
@@ -229,8 +217,6 @@ def get_boxes(horizontal_lines, vertical_lines):
     return boxes
 
 # cut the boxes from the image
-
-
 def cut_boxes(boxes, sudokubox):
     box_images = []
     for box in boxes:
@@ -241,8 +227,6 @@ def cut_boxes(boxes, sudokubox):
     return box_images
 
 # get the number image from the box_image or return none if there is no number
-
-
 def subtract_number(box_image):
     box_image = cv2.cvtColor(box_image, cv2.COLOR_BGR2GRAY)
     ret, box_image = cv2.threshold(box_image, 90, 255, cv2.THRESH_BINARY)
@@ -258,8 +242,8 @@ def subtract_number(box_image):
     h *= crop_factor
 
     number_image = box_image[
-        middle_x - w/2:middle_x + w/2,
-        middle_y - h/2:middle_y + h/2]
+        int(middle_x - w/2) : int(middle_x + w/2),
+        int(middle_y - h/2) : int(middle_y + h/2)]
 
     w, h = list(number_image.shape)
     if (number_image == 0).sum() < 350:
@@ -282,9 +266,7 @@ def make_mock_sudoku(box_images):
 
     return mocksudoku, make_ocr_image(number_images)
 
-#
-
-
+# create the image that can be read by tesseract
 def make_ocr_image(number_images):
     dimentions = []
     for number_image in number_images:
@@ -318,7 +300,6 @@ def make_ocr_image(number_images):
 
     return ocr_image
 
-
 def assemble_sudoku(mocksudoku, sudoku_digits):
     sudoku = []
     for x in mocksudoku:
@@ -327,7 +308,6 @@ def assemble_sudoku(mocksudoku, sudoku_digits):
         else:
             sudoku.append(0)
     return sudoku
-
 
 def recognize(image_name):
         image = cv2.imread(image_name)
@@ -354,7 +334,8 @@ def recognize(image_name):
         # assemble the sudoku from numbers and the mock
         sudoku = assemble_sudoku(mocksudoku, sudoku_digits)
 
-        return sudoku
+        if DEBUG:
+            sudokubox = draw_boxes(boxes, sudokubox)
+            cv2.imwrite('output' + image_name, sudokubox)
 
-        # sudokubox = draw_boxes(boxes, sudokubox)
-        # cv2.imwrite('output' + image_name, sudokubox)
+        return sudoku

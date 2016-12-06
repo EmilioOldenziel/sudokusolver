@@ -19,7 +19,8 @@ def main():
     	print_sudoku(sudoku)
     	solved_sudoku = nss.solve(unicode(sudoku))
     	print('The solved sudoku:')
-    	solved_sudoku = [value for (key, value) in sorted(solved_sudoku.items())]
+    	solved_sudoku = [value for (key, value) 
+    		in sorted(solved_sudoku.items())]
     	print_sudoku(solved_sudoku)
 
 main()
