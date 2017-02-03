@@ -5,7 +5,8 @@ import random
 from PIL import Image
 import pytesseract
 
-DEBUG = False
+DEBUG = True
+DEBUG_FOLDER = 'debug/'
 
 # detect and cut the biggest box in the image
 def get_sudoku_box(image):
@@ -29,7 +30,7 @@ def get_sudoku_box(image):
 
     sudokubox = image[by:by+bh, bx:bx+bw]
     if DEBUG:
-        cv2.imwrite('sudokubox.jpeg', sudokubox)
+        cv2.imwrite(DEBUG_FOLDER + 'sudokubox.jpeg', sudokubox)
     return sudokubox
 
 # get houghlines in the sudokubox
@@ -51,10 +52,9 @@ def get_sudoku_lines(sudokubox):
         x2 = int(x0 - 1000*(-b))
         y2 = int(y0 - 1000*(a))
         lin.append([x1, y1, x2, y2])
-        cv2.line(sudokubox, (x1,y1),(x2,y2), (0,255,100),2)
 
     if DEBUG:
-        cv2.imwrite('houghlines.jpeg', sudokubox)
+        cv2.imwrite(DEBUG_FOLDER + 'houghlines.jpeg', sudokubox)
 
     return lin
 
@@ -269,7 +269,6 @@ def make_mock_sudoku(box_images):
             # set a 1 in the mocksudoku and join number_image to be ocr'ed
             # image
             mocksudoku[n] = 1
-            #cv2.imwrite(unicode(n) + 'image_name.jpeg', number_image)
             number_images.append(number_image)
 
     return mocksudoku, make_ocr_image(number_images)
@@ -330,34 +329,37 @@ def recognize(image_name):
             for lin in vl+hl:
                 cv2.line(sudokubox, (lin[0], lin[1]),
                 (lin[2], lin[3]),(100,50,75),2)
-            cv2.imwrite('lines.jpeg', sudokubox)
+            cv2.imwrite(DEBUG_FOLDER + 'lines.jpeg', sudokubox)
 
         boxes = get_boxes(hl, vl)
 
         if DEBUG:
-            cv2.imwrite('boxes.jpeg',draw_boxes(boxes, sudokubox))
+            cv2.imwrite(DEBUG_FOLDER + 'boxes.jpeg',draw_boxes(boxes, sudokubox))
 
         box_images = cut_boxes(boxes, sudokubox)
         
         if DEBUG:
             for i, bi in enumerate(box_images):
-                cv2.imwrite('boxes/' + unicode(i) +'.jpeg',bi)
+                cv2.imwrite(DEBUG_FOLDER + 'boxes/' + unicode(i) +'.jpeg',bi)
 
         mocksudoku, ocr_image = make_mock_sudoku(box_images)
 
-        cv2.imwrite('output_ocr' + image_name, ocr_image)
+        if DEBUG:
+            cv2.imwrite(DEBUG_FOLDER + 'output_ocr.jpeg', ocr_image)
+
 
         # read numbers from ocr_image
         sudoku_digits = pytesseract.image_to_string(
             Image.fromarray(ocr_image.astype(np.uint8)))
+
         sudoku_digits = list(unicode(sudoku_digits))
         sudoku_digits.reverse()
 
         # assemble the sudoku from numbers and the mock
         sudoku = assemble_sudoku(mocksudoku, sudoku_digits)
 
-        if DEBUG:
-            sudokubox = draw_boxes(boxes, sudokubox)
-            cv2.imwrite('output' + image_name, sudokubox)
+        # if DEBUG:
+        #     sudokubox = draw_boxes(boxes, sudokubox)
+        #     cv2.imwrite('output' + image_name, sudokubox)
 
         return sudoku
