@@ -5,7 +5,7 @@ import random
 from PIL import Image
 import pytesseract
 
-DEBUG = True
+DEBUG = False
 DEBUG_FOLDER = 'debug/'
 
 # detect and cut the biggest box in the image
