@@ -1,5 +1,4 @@
-import os
-import sys
+import os, sys
 import numpy as np
 import cv2
 import random
@@ -10,10 +9,9 @@ DEBUG = False
 
 # detect and cut the biggest box in the image
 def get_sudoku_box(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    edges = cv2.Canny(image, 100, 300, apertureSize=3)
 
-    contours, hierarchy = cv2.findContours(
+    image_2, contours, hierarchy = cv2.findContours(
         edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     boxes = []
@@ -29,18 +27,21 @@ def get_sudoku_box(image):
             bw = w
             bh = h
 
-    # cv2.rectangle(gray,(bx,by),(bx+bw,by+bh),(0,255,0),2)
     sudokubox = image[by:by+bh, bx:bx+bw]
+    if DEBUG:
+        cv2.imwrite('sudokubox.jpeg', sudokubox)
     return sudokubox
 
 # get houghlines in the sudokubox
 def get_sudoku_lines(sudokubox):
-    canny = cv2.Canny(sudokubox, 50, 150, apertureSize=3)
+    gray = cv2.cvtColor(sudokubox,cv2.COLOR_BGR2GRAY)
+    canny = cv2.Canny(gray, 50, 150, apertureSize=3)
 
     lin = []
 
-    lines = cv2.HoughLines(canny, 1, np.pi/180, 200)
-    for rho, theta in lines[0]:
+    lines = cv2.HoughLines(canny,1,np.pi/180,200)
+    for line in lines:
+        rho,theta = line[0]
         a = np.cos(theta)
         b = np.sin(theta)
         x0 = a*rho
@@ -50,6 +51,10 @@ def get_sudoku_lines(sudokubox):
         x2 = int(x0 - 1000*(-b))
         y2 = int(y0 - 1000*(a))
         lin.append([x1, y1, x2, y2])
+        cv2.line(sudokubox, (x1,y1),(x2,y2), (0,255,100),2)
+
+    if DEBUG:
+        cv2.imwrite('houghlines.jpeg', sudokubox)
 
     return lin
 
@@ -86,7 +91,7 @@ def split_lines(lines, sudokubox):
                 rate = float(dx)/float(dy)
             x1 = int(x1 - y1*rate)
             y1 = 0
-            # which is te right size?
+            # which is the right size?
             x2 = int(x1 + sudokubox.shape[0]*rate)
             y2 = sudokubox.shape[0]
             vertical_lines.append([x1, y1, x2, y2])
@@ -97,12 +102,12 @@ def split_lines(lines, sudokubox):
 def group_lines(horizontal_lines, vertical_lines, sudokubox):
 
     horizontal_lines.sort(key=lambda x: x[1])
-    prev = horizontal_lines[0][1]
+    prev = (horizontal_lines[0][1] + horizontal_lines[1][1])/2
     average = 0
 
     for hl in horizontal_lines:
         x1, y1, x2, y2 = hl
-        average = average + abs(prev-y1)
+        average = average + abs(prev-((y1+y2)/2))
         prev = y1
     average = average/len(horizontal_lines)
 
@@ -129,7 +134,7 @@ def group_lines(horizontal_lines, vertical_lines, sudokubox):
 
     for vl in vertical_lines:
         x1, y1, x2, y2 = vl
-        average = average + abs(prev-x1)
+        average = average + abs(prev-((x1+x2)/2))
         prev = x1
     average = average/len(vertical_lines)
 
@@ -179,10 +184,8 @@ def draw_lines(lines, image):
 
 
 def draw_boxes(boxes, image):
-    color = (random.randint(0, 255), random.randint(
-        0, 255), random.randint(0, 255))
-    # draw boxes
     for box in boxes:
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         p1, p2 = box
         cv2.rectangle(image, (p1[0], p1[1]), (p2[0], p2[1]), color, 2)
     return image
@@ -227,7 +230,7 @@ def cut_boxes(boxes, sudokubox):
     return box_images
 
 # get the number image from the box_image or return none if there is no number
-def subtract_number(box_image):
+def subtract_number(box_image, i):
     box_image = cv2.cvtColor(box_image, cv2.COLOR_BGR2GRAY)
     ret, box_image = cv2.threshold(box_image, 90, 255, cv2.THRESH_BINARY)
 
@@ -245,8 +248,10 @@ def subtract_number(box_image):
         int(middle_x - w/2) : int(middle_x + w/2),
         int(middle_y - h/2) : int(middle_y + h/2)]
 
+    cv2.imwrite('boxes/' + unicode(i) +'.jpeg',number_image)
+
     w, h = list(number_image.shape)
-    if (number_image == 0).sum() < 350:
+    if (number_image == 0).sum() < 250:
         return
     return number_image
 
@@ -256,7 +261,7 @@ def make_mock_sudoku(box_images):
     number_images = []
 
     for n, box_image in enumerate(box_images):
-        number_image = subtract_number(box_image)
+        number_image = subtract_number(box_image, n)
         if number_image is not None:
             # set a 1 in the mocksudoku and join number_image to be ocr'ed
             # image
@@ -317,9 +322,22 @@ def recognize(image_name):
         hg, vg = group_lines(h, v, sudokubox)
         hl = average_line_groups(hg)
         vl = average_line_groups(vg)
+
+        if DEBUG:
+            for lin in vl+hl:
+                cv2.line(sudokubox, (lin[0], lin[1]),(lin[2], lin[3]),(100,50,75),2)
+            cv2.imwrite('lines.jpeg', sudokubox)
+
         boxes = get_boxes(hl, vl)
 
+        if DEBUG:
+            cv2.imwrite('boxes.jpeg',draw_boxes(boxes, sudokubox))
+
         box_images = cut_boxes(boxes, sudokubox)
+        
+        if DEBUG:
+            for i, bi in enumerate(box_images):
+                cv2.imwrite('boxes/' + unicode(i) +'.jpeg',bi)
 
         mocksudoku, ocr_image = make_mock_sudoku(box_images)
 
