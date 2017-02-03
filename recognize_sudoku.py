@@ -185,7 +185,9 @@ def draw_lines(lines, image):
 
 def draw_boxes(boxes, image):
     for box in boxes:
-        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        color = (random.randint(0, 255),
+                 random.randint(0, 255),
+                 random.randint(0, 255))
         p1, p2 = box
         cv2.rectangle(image, (p1[0], p1[1]), (p2[0], p2[1]), color, 2)
     return image
@@ -229,7 +231,8 @@ def cut_boxes(boxes, sudokubox):
         box_images.append(box_image)
     return box_images
 
-# get the number image from the box_image or return none if there is no number
+# get the number image from the box_image 
+# or return none if there is no number
 def subtract_number(box_image, i):
     box_image = cv2.cvtColor(box_image, cv2.COLOR_BGR2GRAY)
     ret, box_image = cv2.threshold(box_image, 90, 255, cv2.THRESH_BINARY)
@@ -325,7 +328,8 @@ def recognize(image_name):
 
         if DEBUG:
             for lin in vl+hl:
-                cv2.line(sudokubox, (lin[0], lin[1]),(lin[2], lin[3]),(100,50,75),2)
+                cv2.line(sudokubox, (lin[0], lin[1]),
+                (lin[2], lin[3]),(100,50,75),2)
             cv2.imwrite('lines.jpeg', sudokubox)
 
         boxes = get_boxes(hl, vl)

@@ -17,7 +17,9 @@ def main():
         else:
             print image_name + ': fail'
             
+            print 'test input:'
             print sudoku_solver.print_sudoku(sudoku)
+            print 'result:'
             print sudoku_solver.print_sudoku(result)
 
 main()
