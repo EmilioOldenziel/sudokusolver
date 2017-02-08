@@ -53,9 +53,6 @@ def get_sudoku_lines(sudokubox):
         y2 = int(y0 - 1000*(a))
         lin.append([x1, y1, x2, y2])
 
-    if DEBUG:
-        cv2.imwrite(DEBUG_FOLDER + 'houghlines.jpeg', sudokubox)
-
     return lin
 
 # divide into horizontal and vertical lines and transforme lines to inside
@@ -325,22 +322,19 @@ def recognize(image_name):
         hl = average_line_groups(hg)
         vl = average_line_groups(vg)
 
-        if DEBUG:
-            for lin in vl+hl:
-                cv2.line(sudokubox, (lin[0], lin[1]),
-                (lin[2], lin[3]),(100,50,75),2)
-            cv2.imwrite(DEBUG_FOLDER + 'lines.jpeg', sudokubox)
-
         boxes = get_boxes(hl, vl)
 
-        if DEBUG:
-            cv2.imwrite(DEBUG_FOLDER + 'boxes.jpeg',draw_boxes(boxes, sudokubox))
-
         box_images = cut_boxes(boxes, sudokubox)
-        
+
         if DEBUG:
             for i, bi in enumerate(box_images):
                 cv2.imwrite(DEBUG_FOLDER + 'boxes/' + unicode(i) +'.jpeg',bi)
+            
+            draw_lines(lines, sudokubox)
+            draw_lines(vl+hl, sudokubox)
+            cv2.imwrite(DEBUG_FOLDER + 'lines.jpeg', sudokubox)
+
+            cv2.imwrite(DEBUG_FOLDER + 'boxes.jpeg',draw_boxes(boxes, sudokubox))
 
         mocksudoku, ocr_image = make_mock_sudoku(box_images)
 
