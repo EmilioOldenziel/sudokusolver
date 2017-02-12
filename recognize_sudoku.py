@@ -1,9 +1,11 @@
-import os, sys
-import numpy as np
-import cv2
+import os
 import random
-from PIL import Image
+import sys
+
+import cv2
+import numpy as np
 import pytesseract
+from PIL import Image
 
 DEBUG = False
 DEBUG_FOLDER = 'debug/'
@@ -250,6 +252,7 @@ def subtract_number(box_image, i):
 
     cv2.imwrite('boxes/' + unicode(i) +'.jpeg',number_image)
 
+
     w, h = list(number_image.shape)
     if (number_image == 0).sum() < 250:
         return
@@ -323,6 +326,9 @@ def recognize(image_name):
         vl = average_line_groups(vg)
 
         boxes = get_boxes(hl, vl)
+
+        if len(boxes) != 81:
+            sys.exit("not 81 boxes detected")
 
         box_images = cut_boxes(boxes, sudokubox)
 
