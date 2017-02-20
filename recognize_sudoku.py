@@ -7,12 +7,15 @@ import numpy as np
 import pytesseract
 from PIL import Image
 
-DEBUG = False
+DEBUG = True
 DEBUG_FOLDER = 'debug/'
 
 # detect and cut the biggest box in the image
 def get_sudoku_box(image):
     edges = cv2.Canny(image, 100, 300, apertureSize=3)
+
+    if DEBUG:
+        cv2.imwrite(DEBUG_FOLDER + 'canny.jpeg', edges)
 
     image_2, contours, hierarchy = cv2.findContours(
         edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -253,8 +256,6 @@ def subtract_number(box_image, i):
         int(middle_x - w/2) : int(middle_x + w/2),
         int(middle_y - h/2) : int(middle_y + h/2)]
 
-    cv2.imwrite('boxes/' + unicode(i) +'.jpeg',number_image)
-
     img_w, img_h = list(number_image.shape)
 
     edges = cv2.Canny(number_image  , 100, 300, apertureSize=3)
@@ -262,12 +263,8 @@ def subtract_number(box_image, i):
     number_2, contours, hierarchy = cv2.findContours(
         edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    number_2 = number_image
-
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
-        if DEBUG:
-            cv2.rectangle(number_2, (x, y), (x+w, y+h), (0,0,0), 2)
 
     boxes = []
     biggest = bx = by = bw = bh = 0
@@ -283,7 +280,8 @@ def subtract_number(box_image, i):
             bh = h
     
     if DEBUG:
-        cv2.imwrite(DEBUG_FOLDER +  '/numbers/' + unicode(i)+ '.jpg',number_2)
+        cv2.imwrite(DEBUG_FOLDER + '/numbers/' + unicode(i) + '.jpg', 
+                    number_image)
 
     if biggest < 500:
         return
@@ -348,7 +346,7 @@ def assemble_sudoku(mocksudoku, sudoku_digits):
             sudoku.append(0)
     return sudoku
 
-def recognize(image_name):
+def recognize(image_name, expected_numbers = None):
         image = cv2.imread(image_name)
         sudokubox = get_sudoku_box(image)
         lines = get_sudoku_lines(sudokubox)
@@ -385,9 +383,9 @@ def recognize(image_name):
             Image.fromarray(ocr_image.astype(np.uint8)))
 
         sudoku_digits = list(unicode(sudoku_digits))
-        sudoku_digits.reverse()
 
         # assemble the sudoku from numbers and the mock
+        sudoku_digits.reverse()
         sudoku = assemble_sudoku(mocksudoku, sudoku_digits)
 
         if DEBUG:
