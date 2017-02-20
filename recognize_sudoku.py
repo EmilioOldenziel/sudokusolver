@@ -31,8 +31,8 @@ def get_sudoku_box(image):
             bh = h
 
     if biggest == 0:
-        print('sudokubox not found!')
-        exit()
+        raise Exception('sudoku box was not found')
+
     sudokubox = image[by:by+bh, bx:bx+bw]
     if DEBUG:
         cv2.imwrite(DEBUG_FOLDER + 'sudokubox.jpeg', sudokubox)
@@ -283,7 +283,7 @@ def subtract_number(box_image, i):
             bh = h
     
     if DEBUG:
-        cv2.imwrite('debug/numbers/' + unicode(i)+ '.jpg',number_2)
+        cv2.imwrite(DEBUG_FOLDER +  '/numbers/' + unicode(i)+ '.jpg',number_2)
 
     if biggest < 500:
         return
@@ -360,7 +360,7 @@ def recognize(image_name):
         boxes = get_boxes(hl, vl)
 
         if len(boxes) != 81:
-            exit("not 81 boxes detected")
+            raise Exception('not 81 boxes')
 
         box_images = cut_boxes(boxes, sudokubox)
 
