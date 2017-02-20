@@ -30,6 +30,9 @@ def get_sudoku_box(image):
             bw = w
             bh = h
 
+    if biggest == 0:
+        print('sudokubox not found!')
+        exit()
     sudokubox = image[by:by+bh, bx:bx+bw]
     if DEBUG:
         cv2.imwrite(DEBUG_FOLDER + 'sudokubox.jpeg', sudokubox)
@@ -252,10 +255,39 @@ def subtract_number(box_image, i):
 
     cv2.imwrite('boxes/' + unicode(i) +'.jpeg',number_image)
 
+    img_w, img_h = list(number_image.shape)
 
-    w, h = list(number_image.shape)
-    if (number_image == 0).sum() < 250:
+    edges = cv2.Canny(number_image  , 100, 300, apertureSize=3)
+
+    number_2, contours, hierarchy = cv2.findContours(
+        edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    number_2 = number_image
+
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        if DEBUG:
+            cv2.rectangle(number_2, (x, y), (x+w, y+h), (0,0,0), 2)
+
+    boxes = []
+    biggest = bx = by = bw = bh = 0
+
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        if(w*h) > biggest:
+            bc = cnt
+            biggest = w*h
+            bx = x
+            by = y
+            bw = w
+            bh = h
+    
+    if DEBUG:
+        cv2.imwrite('debug/numbers/' + unicode(i)+ '.jpg',number_2)
+
+    if biggest < 500:
         return
+    
     return number_image
 
 
@@ -328,7 +360,7 @@ def recognize(image_name):
         boxes = get_boxes(hl, vl)
 
         if len(boxes) != 81:
-            sys.exit("not 81 boxes detected")
+            exit("not 81 boxes detected")
 
         box_images = cut_boxes(boxes, sudokubox)
 
