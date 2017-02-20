@@ -390,8 +390,8 @@ def recognize(image_name):
         # assemble the sudoku from numbers and the mock
         sudoku = assemble_sudoku(mocksudoku, sudoku_digits)
 
-        # if DEBUG:
-        #     sudokubox = draw_boxes(boxes, sudokubox)
-        #     cv2.imwrite('output' + image_name, sudokubox)
+        if DEBUG:
+             sudokubox = draw_boxes(boxes, sudokubox)
+             cv2.imwrite('output' + image_name, sudokubox)
 
         return sudoku
