@@ -7,7 +7,7 @@ import numpy as np
 import pytesseract
 from PIL import Image
 
-DEBUG = True
+DEBUG = False
 DEBUG_FOLDER = 'debug/'
 
 # detect and cut the biggest box in the image
@@ -193,7 +193,7 @@ def draw_boxes(boxes, image):
         color = (random.randint(0, 255),
                  random.randint(0, 255),
                  random.randint(0, 255))
-        p1, p2 = box
+        p1, p2 = [[int(i[0]), int(i[1])] for i in box]
         cv2.rectangle(image, (p1[0], p1[1]), (p2[0], p2[1]), color, 2)
     return image
 
@@ -219,8 +219,8 @@ def intersect_lines(hline, vline):
 # gives box coordinates by horizontal and vertical lines
 def get_boxes(horizontal_lines, vertical_lines):
     boxes = []
-    for x in xrange(9):
-        for y in xrange(9):
+    for x in range(0,9):
+        for y in range(0,9):
             p1 = intersect_lines(horizontal_lines[x], vertical_lines[y])
             p2 = intersect_lines(horizontal_lines[x+1], vertical_lines[y+1])
             boxes.append([p1, p2])
@@ -230,8 +230,8 @@ def get_boxes(horizontal_lines, vertical_lines):
 def cut_boxes(boxes, sudokubox):
     box_images = []
     for box in boxes:
-        p1x, p1y = box[0]
-        p2x, p2y = box[1]
+        p1x, p1y = map(int, box[0])
+        p2x, p2y = map(int, box[1])
         box_image = sudokubox[p1y:p2y, p1x:p2x]
         box_images.append(box_image)
     return box_images
@@ -280,10 +280,10 @@ def subtract_number(box_image, i):
             bh = h
     
     if DEBUG:
-        cv2.imwrite(DEBUG_FOLDER + '/numbers/' + unicode(i) + '.jpg', 
+        cv2.imwrite(DEBUG_FOLDER + '/numbers/' + str(i) + '.jpg', 
                     number_image)
 
-    if biggest < 500:
+    if biggest < 450:
         return
     
     return number_image
@@ -318,10 +318,10 @@ def make_ocr_image(number_images):
         expand = h - number_image.shape[0]
         width = number_image.shape[1]
         if expand % 2:
-            expand_upper_half = expand/2
+            expand_upper_half = int(expand/2)
             expand_lower_half = expand_upper_half + 1
         else:
-            expand_upper_half = expand/2
+            expand_upper_half = int(expand/2)
             expand_lower_half = expand_upper_half
 
         upper_extention_image = np.full((expand_lower_half, width), 255.0)
@@ -364,7 +364,7 @@ def recognize(image_name, expected_numbers = None):
 
         if DEBUG:
             for i, bi in enumerate(box_images):
-                cv2.imwrite(DEBUG_FOLDER + 'boxes/' + unicode(i) +'.jpeg',bi)
+                cv2.imwrite(DEBUG_FOLDER + 'boxes/' + str(i) +'.jpeg',bi)
             
             draw_lines(lines, sudokubox)
             draw_lines(vl+hl, sudokubox)
@@ -382,7 +382,7 @@ def recognize(image_name, expected_numbers = None):
         sudoku_digits = pytesseract.image_to_string(
             Image.fromarray(ocr_image.astype(np.uint8)))
 
-        sudoku_digits = list(unicode(sudoku_digits))
+        sudoku_digits = list(str(sudoku_digits))
 
         # assemble the sudoku from numbers and the mock
         sudoku_digits.reverse()
